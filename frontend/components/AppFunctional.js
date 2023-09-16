@@ -16,7 +16,7 @@ export default function AppFunctional(props) {
 
   const [message, setMessage] = useState(initialMessage);
   const [email, setEmail] = useState(initialEmail);
-  const [steps, setSteps] = useState(0);
+  const [steps, setSteps] = useState(initialSteps);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
  
 
@@ -26,7 +26,7 @@ export default function AppFunctional(props) {
     // It's enough to know what index the "B" is at, to be able to calculate them.
     const x = (currentIndex%3) + 1;
     const y = Math.floor(currentIndex/3) + 1;
-    return {x, y};
+    return [x, y];
     
   }
   
@@ -35,7 +35,7 @@ export default function AppFunctional(props) {
     // You can use the `getXY` helper above to obtain the coordinates, and then `getXYMessage`
     // returns the fully constructed string.
     
-    const { x, y } = getXY();
+    const [x, y] = getXY();
     return `Coordinates (${x}, ${y})`;
   }
 
@@ -51,7 +51,7 @@ export default function AppFunctional(props) {
     // This helper takes a direction ("left", "up", etc) and calculates what the next index
     // of the "B" would be. If the move is impossible because we are at the edge of the grid,
     // this helper should return the current index unchanged.
-    const { x, y } = getXY();
+    const [ x, y ] = getXY();
     const gridSize = 3;
 
     //new coordinates 
@@ -78,13 +78,15 @@ export default function AppFunctional(props) {
   function move(evt) {
     // This event handler can use the helper above to obtain a new index for the "B",
     // and change any states accordingly.
-    const newIndex = getNextIndex(direction)
-
-    const direction = evt.target.id
+    const direction = evt.target.id;
+    const newIndex = getNextIndex(direction);
 
     if (newIndex !== currentIndex){
-      setSteps((prevSteps) => prevSteps + 1)
-      setCurrentIndex(newIndex)
+      setCurrentIndex(newIndex);
+      setSteps((prevSteps) => prevSteps + 1);
+      setMessage('');
+    }else{
+      setMessage("You can't go " + direction);
     }
   }
 
@@ -95,37 +97,55 @@ export default function AppFunctional(props) {
 
   function onSubmit(evt) {
     // Use a POST request to send a payload to the server.
+    evt.preventDefault();
 
+    //Create a payload using the given format { "x": 1, "y": 2, "steps": 3, "email": "lady@gaga.com" }`
+    const [ x, y ] = getXY(); 
+    const payload = {
+      x: x,
+      y: y,
+      steps: steps,
+      email: email,
+    }
+
+    axios.post('http://localhost:9000/api/result', payload)
+    .then((resp) => {
+      setMessage('Server response:', resp.data);
+    })
+    .catch((err) => {
+      console.error("Error:", err)
+      setMessage('Error: ' + err.message)
+    })
   }
 
   return (
     <div id="wrapper" className={props.className}>
       <div className="info">
-        <h3 id="coordinates">Coordinates (2, 2)</h3>
-        <h3 id="steps">You moved 0 times</h3>
+        <h3 id="coordinates">{getXYMessage()}</h3>
+        <h3 id="steps">You moved {steps} times</h3>
       </div>
       <div id="grid">
         {
           [0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-            <div key={idx} className={`square${idx === 4 ? ' active' : ''}`}>
-              {idx === 4 ? 'B' : null}
+            <div key={idx} className={`square${idx === currentIndex ? ' active' : ''}`}>
+              {idx === currentIndex ? 'B' : null}
             </div>
           ))
         }
       </div>
       <div className="info">
-        <h3 id="message"></h3>
+        <h3 id="message">{message}</h3>
       </div>
       <div id="keypad">
-        <button id="left">LEFT</button>
-        <button id="up">UP</button>
-        <button id="right">RIGHT</button>
-        <button id="down">DOWN</button>
-        <button id="reset">reset</button>
+        <button id="left" onClick={move}>LEFT</button>
+        <button id="up" onClick={move}>UP</button>
+        <button id="right" onClick={move}>RIGHT</button>
+        <button id="down" onClick={move}>DOWN</button>
+        <button id="reset" onClick={reset}>reset</button>
       </div>
       <form>
-        <input id="email" type="email" placeholder="type email"></input>
-        <input id="submit" type="submit"></input>
+        <input id="email" type="email" onChange={onChange} placeholder="type email"></input>
+        <input id="submit" type="submit" onSubmit={onSubmit}></input>
       </form>
     </div>
   )
