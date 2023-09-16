@@ -1,4 +1,5 @@
 import React from 'react'
+import axios from 'axios'
 
 // Suggested initial states
 const initialMessage = ''
@@ -22,7 +23,7 @@ export default class AppClass extends React.Component {
     this.state = {
       message: initialMessage,
       email: initialEmail,
-      index: initialIndex,
+      currentIndex: initialIndex,
       steps: initialSteps,
     }
   }
@@ -30,8 +31,9 @@ export default class AppClass extends React.Component {
   getXY = () => {
     // It it not necessary to have a state to track the coordinates.
     // It's enough to know what index the "B" is at, to be able to calculate them.
-    const x = (this.state.index % 3) + 1
-    const y = Math.floor(this.state.index/3) + 1
+    const { currentIndex } = this.state.currentIndex
+    const x = (currentIndex % 3) + 1
+    const y = Math.floor(currentIndex/3) + 1
     return [x, y]
   }
 
@@ -45,7 +47,7 @@ export default class AppClass extends React.Component {
 
   reset = () => {
     // Use this helper to reset all states to their initial values.
-    this.setState({
+    this.setState({...this.state,
       message: initialMessage,
       email: initialEmail,
       steps: initialSteps,
@@ -58,6 +60,7 @@ export default class AppClass extends React.Component {
     // of the "B" would be. If the move is impossible because we are at the edge of the grid,
     // this helper should return the current index unchanged.
     const [x, y] = this.getXY()
+    const {currentIndex} = this.state.currentIndex
     const gridSize = 3
 
     let newX = x
@@ -74,31 +77,57 @@ export default class AppClass extends React.Component {
     }
 
     const newIndex = (newY - 1)* gridSize + (newX - 1)
-    return newIndex === this.state.index ? this.state.index : newIndex
+    return newIndex === currentIndex ? currentIndex : newIndex
   }
 
 
   move = (evt) => {
     // This event handler can use the helper above to obtain a new index for the "B",
     // and change any states accordingly.
+    const {currentIndex} = this.state.currentIndex
     const direction = evt.target.id
     const newIndex = this.getNextIndex(direction)
 
-    if (newIndex !== this.state.index){
+    if (newIndex !== currentIndex){
       this.setState((prevState) => ({
         index: newIndex,
         steps: prevState.steps + 1,
         message: "",
       }))
+    } else {
+      this.setState({...this.state, message: `You can't go ${direction}`})
     }
   }
 
   onChange = (evt) => {
     // You will need this to update the value of the input.
+    const inputValue = evt.target.inputValue
+    this.setState({...this.state,
+      email: inputValue
+    })
   }
 
   onSubmit = (evt) => {
     // Use a POST request to send a payload to the server.
+    evt.preventDefault()
+    const [x, y] = this.getXY()
+
+    axios
+    .post('http://localhost:9000/api/result', {
+      email: this.state.email,
+      steps: this.state.steps,
+      x: x,
+      y: y,
+    })
+    .then((resp) => this.setState({...this.state, message: resp.data.message }))
+    .catch((err) => {
+      if (err.response) {
+        this.setState({ ...this.state, message: err.response.data.message })
+      } else {
+        this.setState({ ...this.state, message: 'Error: ' + err.message })
+      }
+    })
+  
   }
 
   render() {
@@ -106,31 +135,31 @@ export default class AppClass extends React.Component {
     return (
       <div id="wrapper" className={className}>
         <div className="info">
-          <h3 id="coordinates">Coordinates (2, 2)</h3>
-          <h3 id="steps">You moved 0 times</h3>
+          <h3 id="coordinates">{this.getXYMessage()}</h3>
+          <h3 id="steps">You moved {this.state.steps} times</h3>
         </div>
         <div id="grid">
           {
             [0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-              <div key={idx} className={`square${idx === 4 ? ' active' : ''}`}>
-                {idx === 4 ? 'B' : null}
+              <div key={idx} className={`square${idx === this.state.currentIndex ? ' active' : ''}`}>
+                {idx === this.state.currentIndex ? 'B' : null}
               </div>
             ))
           }
         </div>
         <div className="info">
-          <h3 id="message"></h3>
+          <h3 id="message">{this.state.message}</h3>
         </div>
         <div id="keypad">
-          <button id="left">LEFT</button>
-          <button id="up">UP</button>
-          <button id="right">RIGHT</button>
-          <button id="down">DOWN</button>
-          <button id="reset">reset</button>
+          <button id="left" onClick={this.move}>LEFT</button>
+          <button id="up" onClick={this.move}>UP</button>
+          <button id="right" onClick={this.move}>RIGHT</button>
+          <button id="down" onClick={this.move}>DOWN</button>
+          <button id="reset" onClick={this.reset}>reset</button>
         </div>
         <form>
-          <input id="email" type="email" placeholder="type email"></input>
-          <input id="submit" type="submit"></input>
+          <input id="email" type="email" placeholder="type email" value={this.state.email}></input>
+          <input id="submit" type="submit" onSubmit={this.onSubmit}></input>
         </form>
       </div>
     )

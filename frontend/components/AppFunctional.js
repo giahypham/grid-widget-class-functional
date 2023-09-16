@@ -108,7 +108,7 @@ export default function AppFunctional(props) {
       x: x,
       y: y,
     })
-    .then((resp) => console.log(resp.data))
+    .then((resp) => resp.data.message)
     .catch((err) => err.resp.data.message)
     .finally(() => {
       setMessage(message);
