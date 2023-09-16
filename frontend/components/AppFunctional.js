@@ -1,5 +1,4 @@
-import React from 'react'
-import { useState } from 'react'
+import React, { useState }  from 'react'
 import axios from 'axios'
 
 // Suggested initial states
@@ -43,7 +42,7 @@ export default function AppFunctional(props) {
     // Use this helper to reset all states to their initial values.
     setMessage(initialMessage)
     setEmail(initialEmail)
-    setSteps(0)
+    setSteps(initialSteps)
     setCurrentIndex(initialIndex)
   }
 
@@ -92,7 +91,7 @@ export default function AppFunctional(props) {
 
   function onChange(evt) {
     // You will need this to update the value of the input.
-    const inputValue = evt.target.value
+    const  inputValue   = evt.target.value
     setEmail(inputValue);
   }
 
@@ -102,16 +101,25 @@ export default function AppFunctional(props) {
 
     const [ x, y ] = getXY(); 
 
+    let message = '';
+
+    console.log('payload', { email: email, steps: steps, x: x, y:y})
     axios.post('http://localhost:9000/api/result', {
       email: email,
       steps: steps,
       x: x,
       y: y,
     })
-    .then((resp) => resp.data.message)
-    .catch((err) => err.resp.data.message)
+    .then((resp) => {
+      message = resp.data.message
+    })
+    .catch((err) => {
+      console.log(err)
+      message = err.response.data.message
+    })
     .finally(() => {
       setMessage(message);
+      setEmail(initialEmail);
     })
   }
 
@@ -119,7 +127,7 @@ export default function AppFunctional(props) {
     <div id="wrapper" className={props.className}>
       <div className="info">
         <h3 id="coordinates">{getXYMessage()}</h3>
-        <h3 id="steps">You moved {steps} times</h3>
+        <h3 id="steps">You moved {steps} {steps === 1 ? 'time' : 'times'}</h3>
       </div>
       <div id="grid">
         {
@@ -140,9 +148,9 @@ export default function AppFunctional(props) {
         <button id="down" onClick={move}>DOWN</button>
         <button id="reset" onClick={reset}>reset</button>
       </div>
-      <form>
+      <form >
         <input id="email" type="email" onChange={onChange} value={email} placeholder="type email"></input>
-        <input id="submit" type="submit" onSubmit={onSubmit}></input>
+        <input id="submit" type="submit" onClick={onSubmit} ></input>
       </form>
     </div>
   )
