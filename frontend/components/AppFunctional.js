@@ -92,29 +92,26 @@ export default function AppFunctional(props) {
 
   function onChange(evt) {
     // You will need this to update the value of the input.
-    setEmail(evt.target.value);
+    const inputValue = evt.target.value
+    setEmail(inputValue);
   }
 
   function onSubmit(evt) {
     // Use a POST request to send a payload to the server.
     evt.preventDefault();
 
-    //Create a payload using the given format { "x": 1, "y": 2, "steps": 3, "email": "lady@gaga.com" }`
     const [ x, y ] = getXY(); 
-    const payload = {
+
+    axios.post('http://localhost:9000/api/result', {
+      email: email,
+      steps: steps,
       x: x,
       y: y,
-      steps: steps,
-      email: email,
-    }
-
-    axios.post('http://localhost:9000/api/result', payload)
-    .then((resp) => {
-      setMessage('Server response:', resp.data);
     })
-    .catch((err) => {
-      console.error("Error:", err)
-      setMessage('Error: ' + err.message)
+    .then((resp) => console.log(resp.data))
+    .catch((err) => err.resp.data.message)
+    .finally(() => {
+      setMessage(message);
     })
   }
 
@@ -144,7 +141,7 @@ export default function AppFunctional(props) {
         <button id="reset" onClick={reset}>reset</button>
       </div>
       <form>
-        <input id="email" type="email" onChange={onChange} placeholder="type email"></input>
+        <input id="email" type="email" onChange={onChange} value={email} placeholder="type email"></input>
         <input id="submit" type="submit" onSubmit={onSubmit}></input>
       </form>
     </div>
